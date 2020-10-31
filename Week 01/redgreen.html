@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>red green</title>
+    <style>
+        div {
+            background-color: gray;
+            display: inline-block;
+            margin: 30px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50px;
+        }
+
+        .green.light {
+            background-color: green;
+        }
+
+        .yellow.light {
+            background-color: yellow;
+        }
+
+        .red.light {
+            background-color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="green" id = "green"></div>
+    <div class="yellow" id = "yellow"></div>
+    <div class="red" id = "red"></div>
+
+    <button id="next">next</div>
+</body>
+
+<script>
+    function green() {
+        var lights = document.getElementsByTagName("div");
+        for (var i = 0; i < 3; i++) {
+            lights[i].classList.remove("light");
+        }
+        document.getElementsByClassName("green")[0].classList.add("light");
+    }
+
+    function red() {
+        var lights = document.getElementsByTagName("div");
+        for (var i = 0; i < 3; i++) {
+            lights[i].classList.remove("light");
+        }
+        document.getElementsByClassName("red")[0].classList.add("light");
+    }
+
+    function yellow() {
+        var lights = document.getElementsByTagName("div");
+        for (var i = 0; i < 3; i++) {
+            lights[i].classList.remove("light");
+        }
+        document.getElementsByClassName("yellow")[0].classList.add("light");
+    }
+    
+    // 方案1：callback hell -> 传统的异步嵌套
+    // function go(){
+    //     green();
+    //     setTimeout(function(){
+    //         yellow();
+    //         setTimeout(function(){
+    //             red();
+    //             setTimeout(function(){
+    //                 go();
+    //             },1000);
+    //         },1000);
+    //     },1000);
+    // }
+
+    // 方案2：promise --> then里面返回promise，实现链式表达式，
+    function sleep(t) {
+        return new Promise((resolve, reject) => {
+            setTimeout(resolve, t);
+        });
+    }
+    // function go(){
+    //     green();
+    //     sleep(1000).then(()=>{
+    //         yellow();
+    //         return sleep(1000);
+    //     }).then(()=>{
+    //         red();
+    //         return sleep(1000);
+    //     }).then(()=>{
+    //         return go();
+    //     })
+    // }
+
+    // 方案3：async + await --> 语法糖，同步代码的写法描述异步执行
+    // async function go() {
+    //     while (true) {
+    //         green();
+    //         await sleep(1000);
+    //         yellow();
+    //         await sleep(200);
+    //         red();
+    //         await sleep(500);
+    //     }
+    // }
+
+    // 扩展场景2：不用自动循环交通灯，交警手动指挥
+    function happen(element,eventName){
+        return new Promise((resolve,reject)=>{
+            element.addEventListener(eventName,resolve,{once:true});
+        })
+    }
+    // async function go() {
+    //     while (true) {
+    //         green();
+    //         await happen(document.getElementById("next"),"click"); //灯的变化不由定时器控制，由事件控制
+    //         yellow();
+    //         await happen(document.getElementById("next"),"click");
+    //         red();
+    //         await happen(document.getElementById("next"),"click");
+    //     }
+    // }
+
+    
+    // 方案4：generator（function*）+ yield模拟promise： generator返回迭代器 --> 早期人民的智慧
+    function* go(){
+        while(true){
+            green();
+            yield sleep(1000);
+            yellow();
+            yield sleep(1000);
+            red();
+            yield sleep(1000);
+        }
+    }
+
+    function run(iterator){
+        let { value, done } = iterator.next();
+        if(done){
+            return;
+        }
+        if(value instanceof Promise){
+            value.then(()=>{
+                run(iterator);
+            });
+        }
+    }
+
+    function co(generator){
+        return function(){
+            return run(generator());
+        }
+    }
+    go = co(go); //模拟CO框架
+    go();
+
+
+    async function* counter(){
+        let i = 0;
+        while(true){
+            await sleep(1000);
+            yield i++;
+        }
+    }
+    (async function(){
+        for await(let v of counter()){
+            console.log(v);
+        }
+    })()
+    
+</script>
+
+</html>
