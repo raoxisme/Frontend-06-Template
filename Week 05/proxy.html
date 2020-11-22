@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proxy</title>
+</head>
+
+<body>
+  <script>
+    /* 场景：对对象属性进行操作时，代理操作行为；例如统计一个function中调用了多少个对象？那么可以在function里面操作proxy过的对象        
+     */
+    let callbacks = new Map()
+    let reactivties = new Map() //保证proxy是同一个，当对象有子对象，如 object.a.b时候
+    let userdReactivties = []
+
+    let object = {
+      a: 1,  // { b: 3 }
+      b: 2
+    }
+    let po = reactive(object)
+
+    effect(() => {
+      console.log(po.a)
+    })
+
+    function effect(callback) {
+      // callbacks.push(callback)
+      userdReactivties = []
+      callback()
+      console.log(userdReactivties)
+
+      for (let reactivity of userdReactivties) {
+        // reactivity[0] -- 对象; reactivity[1] -- 属性
+        if (!callbacks.has(reactivity[0])) {
+          callbacks.set(reactivity[0], new Map())
+        }
+        if (!callbacks.get(reactivity[0]).has(reactivity[1])) {
+          callbacks.get(reactivity[0]).set(reactivity[1], [])
+        }
+        callbacks.get(reactivity[0]).get(reactivity[1]).push(callback)
+      }
+    }
+
+    function reactive(object) {
+      if (reactivties.has(object)) {
+        return reactivties.get(object)
+      }
+      let proxy = new Proxy(object, {
+        set(obj, prop, val) {
+          obj[prop] = val
+          if (callbacks.get(obj)) {
+            if (callbacks.get(obj).get(prop)) {
+              for (let callback of callbacks.get(obj).get(prop)) {
+                callback()
+              }
+            }
+          }
+
+          return obj[prop]
+        },
+        get(obj, prop) {
+          userdReactivties.push([obj, prop])
+          if (typeof prop === 'object') {
+            return reactive(obj[prop])
+          }
+          return obj[prop]
+        }
+      })
+      reactivties.set(object, proxy)
+      return proxy
+    }
+    
+    /* 测试案例：读写对象属性；添加对象属性 ==> 查看是否proxy的callback已经被调用
+     */
+     object.a = 3
+     console.log(object.b)
+     object.x = { d: 5 }
+  </script>
+</body>
+
+</html>
