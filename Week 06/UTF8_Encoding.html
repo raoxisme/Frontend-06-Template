@@ -1,0 +1,88 @@
+<script>
+    /* UTF-8编码规则：如果只有一个字节则其最高二进制位为0；如果是多字节，其第一个字节从最高位开始，连续的二进制位值为1的个数决定了其编码的字节数，其余各字节均以10开头
+       UTF-8使用1~4字节为每个字符编码：
+        ·一个US-ASCIl字符只需1字节编码（Unicode范围由U+0000~U+007F）。
+        ·带有变音符号的拉丁文、希腊文、西里尔字母、亚美尼亚语、希伯来文、阿拉伯文、叙利亚文等字母则需要2字节编码（Unicode范围由U+0080~U+07FF）。
+        ·其他语言的字符（包括中日韩文字、东南亚文字、中东文字等）包含了大部分常用字，使用3字节编码。
+        ·其他极少使用的语言字符使用4字节编码
+
+        参考Geek_89bfc9同学的实现，修改补零并添加备注
+    */
+
+    function UTF8_Encoding(str) {
+        let buffer = [];
+        for (let char of str) {
+            //获取unicode码点
+            const codePoint = char.charCodeAt(0);
+            //1个字节
+            if (codePoint >= 0x0 && codePoint <= 0x7f) {
+                //10进制数转16进制字符串
+                buffer.push(codePoint.toString(16));
+
+            } else if (codePoint >= 0x80 && codePoint <= 0x7ff) {
+                //2个字节:带有变音符号的拉丁文、希腊文、西里尔字母、亚美尼亚语、希伯来文、阿拉伯文、叙利亚文等字母
+                //10进制码点转换成2进制字符串
+                let strBinary = codePoint.toString(2);
+                let firstByte = "110";
+                let secondByte = "10";
+                //从strBinary获取后六位并加入到第二个字节中
+                secondByte += strBinary.substring(strBinary.length - 6);
+
+                //去掉后六位，并补0
+                strBinary = strBinary.substring(0, strBinary.length - 6);                
+                strBinary = ( '00000' + strBinary ).slice(-5)
+
+                firstByte += strBinary;
+                const finalBytes = firstByte + secondByte;
+                //parse把2进制字符串转换成10进制数，再把10进制数转成16进制字符串，再加到buffer
+                buffer.push(parseInt(finalBytes, 2).toString(16));
+
+            } else if (codePoint > 0x7ff && codePoint <= 0xffff) {
+                //3个字节: 中日韩文字、东南亚文字、中东文字等
+                let strBinary = codePoint.toString(2);
+                let firstByte = "1110";
+                let secondByte = "10";
+                let thirdByte = "10";
+
+                thirdByte += strBinary.substring(strBinary.length - 6);
+                strBinary = strBinary.substring(0, strBinary.length - 6);
+
+                secondByte += strBinary.substring(strBinary.length - 6);
+                strBinary = strBinary.substring(0, strBinary.length - 6);
+
+                strBinary = ( '0000' + strBinary ).slice(-4)
+
+                firstByte += strBinary;
+                const finalBytes = firstByte + secondByte + thirdByte;
+                buffer.push(parseInt(finalBytes, 2).toString(16));
+
+            } else {
+                //4个字节 其他极少使用的语言字符
+                let strBinary = codePoint.toString(2);
+                let firstByte = "11110";
+                let secondByte = "10";
+                let thirdByte = "10";
+                let fourthByte = "10";
+
+                fourthByte += strBinary.substring(strBinary.length - 6);
+                strBinary = strBinary.substring(0, strBinary.length - 6);
+
+                thirdByte += strBinary.substring(strBinary.length - 6);
+                strBinary = strBinary.substring(0, strBinary.length - 6);
+
+                secondByte += strBinary.substring(strBinary.length - 6);
+                strBinary = strBinary.substring(0, strBinary.length - 6);
+              
+                strBinary = ( '000' + strBinary ).slice(-3)
+
+                firstByte += strBinary;
+                const finalBytes = firstByte + secondByte + thirdByte + fourthByte;
+                buffer.push(parseInt(finalBytes, 2).toString(16));
+            }
+        }
+        return buffer;
+    }
+
+    console.log( UTF8_Encoding('abcdz`') );
+    console.log( UTF8_Encoding('我的js') )
+</script>
