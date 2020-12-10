@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Realm</title>
 </head>
 
 <body>
@@ -12,7 +12,6 @@
     <script src="https://gw.alipayobjects.com/os/antv/pkg/_antv.g6-3.1.1/build/g6.js"></script>
     <script>
         // 找出js中Realm，所有的对象，并使用G6展示
-
 
         let getRealm = () => {
             let set = new Set(); // 目的是防止重复
@@ -74,11 +73,13 @@
                 children: objects.map(o => {
                     return {
                         id: o,
+                        collapsed: true,//初始折叠
                         children: []
                     }
                 })
             }
             let queue = [...realm.children];
+
             while (queue.length) {
                 let child = queue.shift();
                 let id = child.id;
@@ -88,12 +89,14 @@
                 if (set.has(object))
                     continue;
                 set.add(object);
+
                 for (let p of Object.getOwnPropertyNames(object)) {
                     let d = Object.getOwnPropertyDescriptor(object, p);
                     let pushChild = (type = 'value') => {
                         let uid = type === 'value' ? `${id}.${p}` : `${id}.${p}.[${type}]`;
                         let o = {
                             id: uid,
+                            collapsed: true, //初始折叠
                             children: []
                         }
                         map.set(uid, d[type]);
@@ -110,7 +113,6 @@
             }
             return realm;
         }
-
 
         let render = data => {
             var graph = new G6.TreeGraph({
@@ -143,8 +145,9 @@
                     }
                 },
                 layout: {
-                    type: 'compactBox',
+                    type: 'indented', //'compactBox', 'indented'
                     direction: 'LR',
+                    //radial: true ,
                     getId: function getId(d) {
                         return d.id;
                     },
