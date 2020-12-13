@@ -1,22 +1,21 @@
 <script>
-    const start = ch => ch == 'a' ? foundA1 : start//
-    const foundA1 = ch => ch == 'b' ? foundB1 : start(ch)//a
-    const foundB1 = ch => ch == 'a' ? foundA2 : start(ch)//ab
-    const foundA2 = ch => ch == 'b' ? foundB2 : start(ch)//aba
-    const foundB2 = ch => ch == 'a' ? foundA3 : foundB1(ch)//这个状态时可以确定str满足abab
-    //其中又发现abab的ab满足模式串，所以回到foundB1
-    const foundA3 = ch => ch == 'b' ? foundB3 : foundA2(ch)//这个状态时可以确定str满足ababa
-    //其中又发现ababa的aba满足模式串，所以回到foundA2
-    const foundB3 = ch => ch == 'x' ? end : foundB2(ch)
+    //作业：使用状态机完成”abababx”的处理。
+    const start = c => c == 'a' ? foundA1 : start//
+    const foundA1 = c => c == 'b' ? foundB1 : start(c)//a
+    const foundB1 = c => c == 'a' ? foundA2 : start(c)//ab
+    const foundA2 = c => c == 'b' ? foundB2 : start(c)//aba
+    const foundB2 = c => c == 'a' ? foundA3 : foundB1(c)//满足abab; 且abab的ab满足模式串，所以回到foundB1
+    const foundA3 = c => c == 'b' ? foundB3 : foundA2(c)//满足ababa;且ababa的aba满足模式串，所以回到foundA2
+    const foundB3 = c => c == 'x' ? end : foundB2(c)
     const end = () => end
 
-    function match(str,init = start,succ = end){
-        let state = init
-        for (const ch of str) {
-            state = state(ch)
+    function match(string) {
+        let state = start
+        for (const c of string) {
+            state = state(c)
         }
 
-        return state === succ
+        return state === end
     }
 
     console.log(

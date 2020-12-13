@@ -1,13 +1,14 @@
 <script>
+    //用状态机实现：字符串“abcabx”的解析
     function match(string) {
-        let state = start
+        let state = start //代表下一个函数名
         for (const c of string) {
             state = state(c)
         }
         return state === end
     }
-    function end(c){
-        return end
+    function end(c) {
+        return end //trap
     }
     function start(c) {
         if (c === 'a')
