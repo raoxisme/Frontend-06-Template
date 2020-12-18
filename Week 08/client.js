@@ -147,10 +147,10 @@ class TrunkedBodyParser {
 
 class Request {
     constructor(options) {
-        this.host = options.host
+        this.host = options.host || "GET";
         this.port = options.port || 80
         this.method = options.method
-        this.path = options.path
+        this.path = options.path || "/"
         this.headers = options.headers || {}
         this.body = options.body || {}
         if (!this.headers['Content-Type'])
