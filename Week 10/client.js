@@ -1,32 +1,31 @@
 const net = require('net')
-const parser = require('./parser.js')
-const render = require('./render.js');
+const { parse, resolve } = require('path')
+const parser = require('./parser')
+const render = require('./render')
 const images = require('images');
 
-class Request {
-    constructor(options) {
-        this.method = options.method || 'GET'
-        this.host = options.host
-        this.port = options.port || 80
-        this.path = options.path || '/'
-        this.body = options.body || {}
-        this.headers = options.headers || {}
-        if (!this.headers['Content-Type']) {
-            this.headers['Content-Type'] = 'application/x-www-from-urlencoded'
-        }
+class Request {  //构造请求类
+    constructor(p) {
+        this.method = p.method || 'GET'
+        this.host = p.host
+        this.port = p.port || 80
+        this.path = p.path || '/'
+        this.body = p.data
+        this.headers = p.headers || Object.create(null)
+        if (!this.headers['Content-Type'])
+            this.headers['Content-Type'] = "application/x-www-form-urlencoded"
 
-        if (this.headers['Content-Type'] === 'application/json') {
+        if (this.headers['Content-Type'] === "application/json")
             this.bodyText = JSON.stringify(this.body)
-        } else if (this.headers['Content-Type'] === 'application/x-www-from-urlencoded') {
-            this.bodyText = Object.keys(this.body).map(key => `${key}=${encodeURIComponent(this.body[key])}`).join('&')
-        }
+        else if (this.headers['Content-Type'] === "application/x-www-form-urlencoded")
+            this.bodyText = Object.keys(this.body).map(k => `${k}=${encodeURIComponent(this.body[k])}`).join("&")
 
         this.headers['Content-Length'] = this.bodyText.length
     }
 
-    send(connection) {
+    send(connection) { //将数据发送到服务器·
         return new Promise((resolve, reject) => {
-            const parser = new ResponseParser
+            const parser = new ResponseParser()
             if (connection) {
                 connection.write(this.toString())
             } else {
@@ -37,58 +36,56 @@ class Request {
                     connection.write(this.toString())
                 })
             }
-            connection.on('data', (data) => {
-                //console.log(data.toString())
+            connection.on('data', data => {
                 parser.receive(data.toString())
-                if (parser.isFinished) {
-                    resolve(parser.response)
+                if (parser.isFinised) {
                     connection.end()
+                    resolve(parser.response)
                 }
             })
-            connection.on('error', (err) => {
-                reject(err)
+            connection.on('error', error => {
+                console.error(error)
+                reject(error)
                 connection.end()
             })
+
+
+            // resolve()
         })
     }
 
-    // toString() {
-    //     return `${this.method} ${this.port} HTTP/1.1\r\n
-    //             ${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r
-    //             \r
-    //             ${this.bodyText}`
-    // }
-    toString() {
-        const lines = [`${this.method} ${this.path} HTTP/1.1`];
-        for (const key of Object.keys(this.headers)) {
-          lines.push(`${key}: ${this.headers[key]}`);
-        }
-        lines.push("");
-        lines.push(this.bodyText);
-        return lines.join("\r\n");
+    toString() { //按照请求格式封装请求头
+        return `${this.method} ${this.path} HTTP/1.1\r
+${Object.keys(this.headers).map(k => `${k}: ${this.headers[k]}`).join('\r\n')}\r
+\r
+${this.bodyText}`
     }
 }
 
 class ResponseParser {
     constructor() {
-        this.WATTING_STATUS_LINE = 0
-        this.WATTING_STATUS_LINE_END = 1
-        this.WATTING_HEADER_NAME = 2
-        this.WATTING_HEADER_SPACE = 3
-        this.WATTING_HEADER_VALUE = 4
-        this.WATTING_HEADER_LINE_END = 5
-        this.WATTING_HEADER_BLOCK_END = 6
-        this.WATTING_BODY = 7
-
-        this.current = this.WATTING_STATUS_LINE
-        this.statusLine = ''
+        this.WAIT_STATUS_LINE = 0
+        this.WAIT_STATUS_LINE_END = 1
+        this.WAIT_HEADER_NAME = 2
+        this.WAIT_HEADER_SPACE = 3
+        this.WAIT_HEADER_VALUE = 4
+        this.WAIT_HEADER_VALUE_END = 5
+        this.WAIT_HEADER_LINE_BLOCK_END = 6
+        this.WAIT_BODY = 7
+        this.statusLine = ""
+        this.headerName = ""
+        this.headerValue = ""
         this.headers = {}
-        this.headerName = ''
-        this.headerValue = ''
         this.bodyParser = null
+        this.status = this.WAIT_STATUS_LINE
     }
-    get isFinished() {
-        return this.bodyParser && this.bodyParser.isFinished
+    receive(string) {
+        for (let i = 0; i < string.length; i++) {
+            this.receiveChar(string.charAt(i))
+        }
+    }
+    get isFinised() {
+        return this.bodyParser.isFinised
     }
     get response() {
         this.statusLine.match(/HTTP\/1.1 ([0-9]+) ([\s\S]+)/)
@@ -96,120 +93,104 @@ class ResponseParser {
             statusCode: RegExp.$1,
             statusText: RegExp.$2,
             headers: this.headers,
-            body: this.bodyParser.content.join('')
+            body: this.bodyParser.content.join("")
         }
     }
-    receive(string) {
-        for (let i = 0; i < string.length; i++) {
-            this.receiveChar(string.charAt(i))
-        }
-    }
-    receiveChar(char) {
-        if (this.current === this.WATTING_STATUS_LINE) {
-            if (char === '\r') {
-                this.current = this.WATTING_STATUS_LINE_END
-            } else {
-                this.statusLine += char
+    receiveChar(c) { //状态机实现
+        if (this.status === this.WAIT_STATUS_LINE) {
+            if (c === '\r')
+                this.status = this.WAIT_STATUS_LINE_END
+            else
+                this.statusLine += c
+        } else if (this.status === this.WAIT_STATUS_LINE_END) {
+            if (c === '\n')
+                this.status = this.WAIT_HEADER_NAME
+        } else if (this.status === this.WAIT_HEADER_NAME) {
+            if (c === ':')
+                this.status = this.WAIT_HEADER_SPACE
+            else if (c === '\r') {   // 所有的头信息接受完毕，准备进入WAIT_BODY
+                this.status = this.WAIT_HEADER_LINE_BLOCK_END
+                this.bodyParser = new TrunckedBodyParser()
             }
-        } else if (this.current === this.WATTING_STATUS_LINE_END) {
-            if (char === '\n') {
-                this.current = this.WATTING_HEADER_NAME
-            }
-        } else if (this.current === this.WATTING_HEADER_NAME) {
-            if (char === ':') {
-                this.current = this.WATTING_HEADER_SPACE
-            } else if (char === '\r') {
-                this.current = this.WATTING_HEADER_BLOCK_END
-                if (this.headers['Transfer-Encoding'] === 'chunked') {
-                    this.bodyParser = new TrunkedBodyParser()
-                }
-            } else {
-                this.headerName += char
-            }
-        } else if (this.current === this.WATTING_HEADER_SPACE) {
-            if (char === ' ') {
-                this.current = this.WATTING_HEADER_VALUE
-            }
-        } else if (this.current === this.WATTING_HEADER_VALUE) {
-            if (char === '\r') {
-                this.current = this.WATTING_HEADER_LINE_END
+            else
+                this.headerName += c
+        } else if (this.status === this.WAIT_HEADER_SPACE) {
+            if (c === ' ')
+                this.status = this.WAIT_HEADER_VALUE
+        } else if (this.status === this.WAIT_HEADER_VALUE) {
+            if (c === '\r') {
+                this.status = this.WAIT_HEADER_VALUE_END
                 this.headers[this.headerName] = this.headerValue
-                this.headerName = ''
-                this.headerValue = ''
-            } else {
-                this.headerValue += char
-            }
-        } else if (this.current === this.WATTING_HEADER_LINE_END) {
-            if (char === '\n') {
-                this.current = this.WATTING_HEADER_NAME
-            }
-        } else if (this.current === this.WATTING_HEADER_BLOCK_END) {
-            if (char === '\n') {
-                this.current = this.WATTING_BODY
-            }
-        } else if (this.current === this.WATTING_BODY) {
-            this.bodyParser.receiveChar(char)
+                this.headerName = this.headerValue = ''
+            } else
+                this.headerValue += c
+        } else if (this.status === this.WAIT_HEADER_VALUE_END) {
+            if (c === '\n')
+                this.status = this.WAIT_HEADER_NAME
+        } else if (this.status === this.WAIT_HEADER_LINE_BLOCK_END) {
+            if (c === '\n')
+                this.status = this.WAIT_BODY
+        } else if (this.status === this.WAIT_BODY) {
+            this.bodyParser.receive(c)
         }
+
     }
 }
 
-class TrunkedBodyParser {
+class TrunckedBodyParser {
     constructor() {
-        this.WATTING_LENGTH = 0
-        this.WATTING_LENGTH_LINE_END = 1
-        this.READING_TRUNK = 2
-        this.WATTING_NEW_LINE = 3
-        this.WATTING_NEW_LINE_END = 4
-        
+        this.WATIING_LENGTH = 0
+        this.WATIING_LENGTH_END = 1
+        this.READING_TRUNCK = 2
+        this.WAITING_NEW_LINE = 3
+        this.WAITING_NEW_LINE_END = 4
         this.length = 0
         this.content = []
-        this.isFinished = false
-        this.current = this.WATTING_LENGTH
+        this.isFinised = false
+        this.status = this.WATIING_LENGTH
     }
-    receiveChar(char) {
-        if (this.current === this.WATTING_LENGTH) {
-            if (char === '\r') {
-                if (this.length === 0) {
-                    this.isFinished = true
-                }
-                this.current = this.WATTING_LENGTH_LINE_END
+    receive(c) {
+        if (this.status === this.WATIING_LENGTH) {
+            if (c === '\r') {
+                if (this.length === 0)
+                    this.isFinised = true
+                this.status = this.WATIING_LENGTH_END
             } else {
-                this.length *= 16
-                this.length += parseInt(char, 16)
+                this.length *= 16   //原来的数据需要左移一位，（个位=>十位=>百位，因为是16进制，所以乘以16）
+                this.length += parseInt(c, 16) //新来的按照个位数添加到原数左移后的最后面
             }
-        } else if (this.current === this.WATTING_LENGTH_LINE_END) {
-            if (char === '\n') {
-                this.current = this.READING_TRUNK
-            }
-        } else if (this.current === this.READING_TRUNK) {
-            this.content.push(char)
+        } else if (this.status === this.WATIING_LENGTH_END) {
+            if (c === '\n')
+                this.status = this.READING_TRUNCK
+        } else if (this.status === this.READING_TRUNCK) {
+            this.content.push(c)
             this.length--
             if (this.length === 0) {
-                this.current = this.WATTING_NEW_LINE
+                this.status = this.WAITING_NEW_LINE
             }
-        } else if (this.current === this.WATTING_NEW_LINE) {
-            if (char === '\r') {
-                this.current = this.WATTING_NEW_LINE_END
-            }
-        } else if (this.current === this.WATTING_NEW_LINE_END) {
-            if (char === '\n') {
-                this.current = this.WATTING_LENGTH
-            }
+        } else if (this.status === this.WAITING_NEW_LINE) {
+            if (c === '\r')
+                this.status = this.WAITING_NEW_LINE_END
+        } else if (this.status === this.WAITING_NEW_LINE_END) {
+            if (c === '\n')
+                this.status = this.WATIING_LENGTH
         }
+
     }
 }
 
-void async function () {
+void async function () {   //因为里面使用了await，所以需要用async function的IIFE包裹一下
     let request = new Request({
-        method: 'POST',
         host: '127.0.0.1',
-        port: '8088',
+        port: 8088,
         path: '/',
         headers: {
-            ['X-Foo2']: 'customed'
+            "X-Foo": "123456"
         },
-        body: {
-            name: 'winter'
+        data: {
+            "username": "raox",
+            "password": "123456",
+            "testChuncked": "a".repeat(200)
         }
     })
 
