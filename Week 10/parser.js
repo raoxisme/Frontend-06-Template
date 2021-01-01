@@ -140,9 +140,9 @@ function emit(token) {
         if (!token.isSelfClosing) {
             stack.push(element);
         }
-        //  else {
-        //     layout(element);
-        // }
+         else {
+            layout(element);
+        }
 
         currTextNode = null;
     } else if (token.type === 'endTag') {
