@@ -11,10 +11,9 @@
 根据每一行中最大元素尺寸计算行高
 根据行高flex-align和item-align，确定元素具体位置
 
+### 绘制dom
+递归调用子元素的绘制方法完成Dom树的绘制
+实际浏览器中，文字绘制需要字体库支持；还会对一些图层做compositing
+
 #### 绘制单个元素（利用images库绘制）
 使用npm的images包，绘制在一个viewport上
-与绘制相关的属性：background-color、border、background-image 等等
-
-### 绘制dom（利用images库绘制）  
-递归调用子元素的绘制方法完成Dom树的绘制
-实际浏览器中，文字绘制是难点，需要字体库；还会对一些图层做compositing
