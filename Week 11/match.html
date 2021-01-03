@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>match</title>
+    <style>
+    </style>
+</head>
+
+<body>
+    <div id="header">header</div>
+    <div class="wrapper">
+        <div class="item" id="id_item1">item1</div>
+        <div class="item" id="id_item2">item2</div>
+    </div>
+
+    <script>
+        /* 
+        它接收两个参数，第一个参数是一个选择器字符串性质，第二个是一个 HTML 元素。
+        这个元素你可以认为它一定会在一棵 DOM 树里面。通过选择器和 DOM 元素来判断，当前的元素是否能够匹配到我们的选择器。
+        */
+        function match(selector, element) {
+            if (element == null) return false;
+            
+            const selectorList = selector.split(' ').reverse(); //TODO: 按优先级排列selector
+
+            for (const selector of selectorList) {
+                const list = selector.match(/(#|.)?\w+/g);
+                for (const item of list) {
+                    if (item.charAt(0) === '#') {
+                        if (!(element.id && element.id === item.replace('#', ''))) return false;
+                    } else if (item.charAt(0) === '.') {
+                        if (!(element.classList.length > 0 && Array.from(element.classList).includes(item.replace('.', '')))) return false;
+                    } else {
+                        if (element.tagName !== item.toUpperCase()) return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        console.log(match('div #id_item1', document.getElementById('id_item1')));
+        console.log(match('div .item', document.getElementById('id_item2')));
+    </script>
+</body>
+
+</html>
