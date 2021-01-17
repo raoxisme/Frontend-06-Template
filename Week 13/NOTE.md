@@ -21,7 +21,7 @@
 
 ## 浏览器API
 ### DOM API
-- traversal系列，是废的，不建议用
+- traversal系列，不建议用
 - 节点
     Document：文档根节点   
     DocumentFragment：文档片段   
@@ -34,7 +34,7 @@
     nextSibling ,nextElementSibling,  previousSibling, previousElementSibling   
 - 操作   
     appendChild,  insertBefore,  removeChild, replaceChild   
-- 高级操作
+- 高级操作   
     compareDocumentPosition: 比较两个节点中关系的函数   
     contains: 检查一个节点是否包含另一个节点的函数   
     isEqualNode: 检查两个节点是否完全相同   
