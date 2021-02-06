@@ -10,10 +10,8 @@ export class Listener {
             recognizer.start(evt, context);
 
             const mousemove = (evt) => {
-                // 鼠标移动evt.button一直等于0，有evt.buttons
                 let button = 1;
                 while (button <= evt.buttons) {
-                    // 不太理解这里的掩码操作,待学习
                     if (button & evt.buttons) {
                         let key = button;
                         if (button === 2) {
@@ -104,7 +102,6 @@ export class Recognizer {
             context.isPan = false;
             context.isTap = false;
             context.handler = null;
-            // console.log('startPress');
             this.dispatcher.dispatch('pressStart', {});
         }, 500);
     }
@@ -117,7 +114,6 @@ export class Recognizer {
             context.isPan = true;
             context.isTap = false;
             context.isVertical = dx < dy;
-            // console.log('startPan');
             this.dispatcher.dispatch('panStart', {
                 startX: context.startX,
                 startY: context.startY,
@@ -128,7 +124,6 @@ export class Recognizer {
             clearTimeout(context.handler);
         }
         if (context.isPan) {
-            // console.log('pan', dx, dy);
             this.dispatcher.dispatch('pan', {
                 startX: context.startX,
                 startY: context.startY,
@@ -149,16 +144,13 @@ export class Recognizer {
     }
     end(evt, context) {
         if (context.isTap) {
-            // console.log('Tap');
             this.dispatcher.dispatch('tap', {});
             clearTimeout(context.handler);
         }
         if (context.isPress) {
-            // console.log('endPress');
             this.dispatcher.dispatch('pressEnd', {});
         }
         if (context.isPan) {
-            // console.log('endPan');
             this.dispatcher.dispatch('panEnd', {
                 startX: context.startX,
                 startY: context.startY,
@@ -167,7 +159,6 @@ export class Recognizer {
                 isVertical: context.isVertical,
             });
             // 计算速度，应该是只有移动才需要计算移出时的速度
-            // console.log(context.points, '1')
             context.points = context.points.filter(point => Date.now() - point.t < 500);
             // console.log(context.points, '2')
             let d = 0, v = 0;
@@ -179,7 +170,7 @@ export class Recognizer {
                 v = d / (Date.now() - context.points[0].t);
             }
             if (v > 1.5) {
-                context.flict = true; // 感觉设置这个没多大意义
+                context.flict = true; 
                 this.dispatcher.dispatch('flick', {
                     startX: context.startX,
                     startY: context.startY,
@@ -198,7 +189,6 @@ export class Recognizer {
         clearTimeout(context.handler);
         this.dispatcher.dispatch('cancel', {});
     }
-
 }
 
 export class Dispatcher {
@@ -213,7 +203,6 @@ export class Dispatcher {
         }
         this.element.dispatchEvent(event);
     }
-
 }
 
 export function enableGesture(element) {
